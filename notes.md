@@ -59,7 +59,7 @@ Install the project...
 
 ## Main
 ```
-g++ -Wall -c -I include main.cpp &&
+g++ -Wall -c -I include main.cpp &&            
 g++ -c glad.c -I include &&
 g++ main.o -o main glad.o -lglfw3 -lGL -lX11 -lpthread -lXrandr -lXi -ldl &&
 ./main
