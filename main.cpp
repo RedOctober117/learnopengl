@@ -7,8 +7,8 @@
 #include <cmath>
 #include "shader.h"
 #include "texture2D.h"
-// #include "flycamera.h"
-#include "fpscamera.h"
+#include "flycamera.h"
+// #include "fpscamera.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -36,7 +36,11 @@ float lastFrame = 0.0f;
 float lastX = 0.0f;
 float lastY = 0.0f;
 
-FpsCamera mainCamera;
+bool firstMouse = true;
+
+glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+
+FlyCamera mainCamera(glm::vec3(0.0f, 0.0f, 3.0f));
 
 int main()
 {
@@ -63,70 +67,77 @@ int main()
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-    Shader shader("shaders/shader.vs", "shaders/shader.fs");
+    Shader objectShader("shaders/shader.vs", "shaders/shader.fs");
+    Shader lightingShader("shaders/lightingShader.vs", "shaders/lightingShader.fs");
+    lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
+    lightingShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
 
     // x, y, z
-    float vertices[] = {
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-        0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+    
 
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-        0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-        0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    float vertices[] = {    
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+        0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+        0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+        0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
 
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+        0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+        0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+        0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
 
-        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
 
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-        0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-        0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+        0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+        0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+        0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+        0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+        0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
 
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+        0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+        0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+        0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+        0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+        0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+        0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
     };
 
-    unsigned int indices[] = {
-        0, 1, 3, // first triangle
-        1, 2, 3  // second triangle
-    };
 
-    glm::vec3 cubePositions[] = {
-        glm::vec3( 0.0f,  0.0f,  0.0f), 
-        glm::vec3( 2.0f,  5.0f, -15.0f), 
-        glm::vec3(-1.5f, -2.2f, -2.5f),  
-        glm::vec3(-3.8f, -2.0f, -12.3f),  
-        glm::vec3( 2.4f, -0.4f, -3.5f),  
-        glm::vec3(-1.7f,  3.0f, -7.5f),  
-        glm::vec3( 1.3f, -2.0f, -2.5f),  
-        glm::vec3( 1.5f,  2.0f, -2.5f), 
-        glm::vec3( 1.5f,  0.2f, -1.5f), 
-        glm::vec3(-1.3f,  1.0f, -1.5f)
-    };
+
+    // unsigned int indices[] = {
+    //     0, 1, 3, // first triangle
+    //     1, 2, 3  // second triangle
+    // };
+
+    // glm::vec3 cubePositions[] = {
+    //     glm::vec3( 0.0f,  0.0f,  0.0f), 
+    //     glm::vec3( 2.0f,  5.0f, -15.0f), 
+    //     glm::vec3(-1.5f, -2.2f, -2.5f),  
+    //     glm::vec3(-3.8f, -2.0f, -12.3f),  
+    //     glm::vec3( 2.4f, -0.4f, -3.5f),  
+    //     glm::vec3(-1.7f,  3.0f, -7.5f),  
+    //     glm::vec3( 1.3f, -2.0f, -2.5f),  
+    //     glm::vec3( 1.5f,  2.0f, -2.5f), 
+    //     glm::vec3( 1.5f,  0.2f, -1.5f), 
+    //     glm::vec3(-1.3f,  1.0f, -1.5f)
+    // };
 
     // float texCoords[] = {
     //     0.0f, 0.0f, // lower left
@@ -136,20 +147,20 @@ int main()
 
     // vars to hold the ID references to the given opjects generated by openGL
     unsigned int VBO; // Vertex Buffer Object: stores large number of vertices in GPU memory
-    unsigned int VAO; // Vertex Array Object: stores configurate data for vertices
-    unsigned int EBO;
+    unsigned int cubeVAO; // Vertex Array Object: stores configurate data for vertices
+    // unsigned int EBO;
 
     glGenBuffers(1, &VBO);      // Returns a reference ID for the instantiated buffer object
-    glGenVertexArrays(1, &VAO); // Returns a reference ID for the instantiated array object
-    glGenBuffers(1, &EBO);
+    glGenVertexArrays(1, &cubeVAO); // Returns a reference ID for the instantiated array object
+    // glGenBuffers(1, &EBO);
 
-    glBindVertexArray(VAO);             // Sets the currently bound VAO. All future changes will modify this VAO until a different one is bound.
+    glBindVertexArray(cubeVAO);             // Sets the currently bound VAO. All future changes will modify this VAO until a different one is bound.
     glBindBuffer(GL_ARRAY_BUFFER, VBO); // Set the currently bound array buffer to our Vertex Buffer Object.
 
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); // Copy the data of our vertices into the currently bound buffer.
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     // The following describes the index of the attribute to be modified, its
     // size, type, normalization, stride, and offset. Stride is the byte space
@@ -160,30 +171,43 @@ int main()
     // occupying the first three sizeof(float)s in the element. The total
     // attribute size is 6 sizeof(float)s, and this attrbute begins at the
     // (void *)0th offset.
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
-    glEnableVertexAttribArray(0); // Enable the vertex attrbute we just create.
+    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+    // glEnableVertexAttribArray(0); // Enable the vertex attrbute we just create.
 
     // Our second attrbiute, taking three more sizeof(float)s, begins three
     // (void *)sizeof(float)s in.
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
+    // glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
     // Enable this one too.
+    // glEnableVertexAttribArray(1);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+
+    unsigned int lightVAO;
+    glGenVertexArrays(1, &lightVAO);
+    glBindVertexArray(lightVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    // glEnableVertexAttribArray(1);
 
     // OpenGL expects the images origin to be in the bottom left. It is
     // commonly in the top left. stbi flips it for us.
-    stbi_set_flip_vertically_on_load(true);
-    float borderColor[] = {1.0f, 1.0f, 0.0f, 1.0f};
-    Texture2D containerTexture("container.jpg", GL_TEXTURE0, GL_RGB);
-    containerTexture.use();
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+    // stbi_set_flip_vertically_on_load(true);
+    // float borderColor[] = { 1.0f, 1.0f, 0.0f, 1.0f };
+    // Texture2D containerTexture("container.jpg", GL_TEXTURE0, GL_RGB);
+    // containerTexture.use();
+    // glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
-    Texture2D faceTexture("awesomeface.png", GL_TEXTURE1, GL_RGBA);
-    faceTexture.use();
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+    // Texture2D faceTexture("awesomeface.png", GL_TEXTURE1, GL_RGBA);
+    // faceTexture.use();
+    // glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
-    shader.use();
-    glUniform1i(glGetUniformLocation(shader.ID, "texture1"), 0);
-    shader.setInt("texture2", 1);
+    // shader.use();
+    // glUniform1i(glGetUniformLocation(shader.ID, "texture1"), 0);
+    // shader.setInt("texture2", 1);
     // unsigned int texture;
 
     // Generate an openGL texture.
@@ -229,7 +253,7 @@ int main()
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
-
+    
     // The main loop. Runs until notice to close the window is received.
     while (!glfwWindowShouldClose(window))
     {
@@ -241,27 +265,77 @@ int main()
         
 
         // Declares the color to use to clear the next buffer. Green, in this case.
-        glClearColor(0.2f, 0.3f, 0.3f, 0.5f);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         // Clears the color of the immediate buffer to the color defined above.
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        containerTexture.use();
-        glBindTexture(GL_TEXTURE_2D, containerTexture.ID);
-        faceTexture.use();
-        glBindTexture(GL_TEXTURE_2D, faceTexture.ID);
+        lightPos.x = sin(glfwGetTime() * glm::radians(50.0f));
+        lightPos.z = cos(glfwGetTime() * glm::radians(50.0f));
 
-        shader.use();
+
+        // containerTexture.use();
+        // glBindTexture(GL_TEXTURE_2D, containerTexture.ID);
+        // faceTexture.use();
+        // glBindTexture(GL_TEXTURE_2D, faceTexture.ID);
+
+        objectShader.use();
+        // objectShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
+        objectShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+        objectShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
+        objectShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
+        objectShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+        objectShader.setFloat("material.shininess", 32.0f);
+
+        glm::vec3 lightColor;
+        lightColor.x = sin(glfwGetTime() * 2.0f);
+        lightColor.y = sin(glfwGetTime() * 0.7f);
+        lightColor.z = sin(glfwGetTime() * 1.3f);
+        glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
+        glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);
+        objectShader.setVec3("light.ambient", ambientColor);
+        objectShader.setVec3("light.diffuse", diffuseColor);
+        objectShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+        objectShader.setFloat("light.shininess", 32.0f);
+        
+        objectShader.setVec3("lightPos", lightPos);
+        objectShader.setVec3("viewPos", mainCamera.Position);
 
         // const float radius = 10.0f;
         // float camX = sin(glfwGetTime()) * radius;
         // float camZ = cos(glfwGetTime()) * radius;
+
         
         glm::mat4 projection = glm::perspective(glm::radians(mainCamera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        shader.setMat4("projection", projection);
-
         glm::mat4 view = mainCamera.GetViewMatrix();
-        shader.setMat4("view", view);
+        objectShader.setMat4("projection", projection);
+        objectShader.setMat4("view", view);
+
+        glm::mat4 model = glm::mat4(1.0f);
+        objectShader.setMat4("model", model);
+
+        glBindVertexArray(cubeVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+        lightingShader.use();
+        // lightingShader.setVec3("lightPos", lightPos);
+        lightingShader.setMat4("projection", projection);
+        lightingShader.setMat4("view", view);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, lightPos);
+        model = glm::scale(model, glm::vec3(0.2f));
+        lightingShader.setMat4("model", model);
+
+        glBindVertexArray(lightVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        // shader.setMat4("view", view);
+
+
         
+        // lightingShader.use();
+        // glm::mat4 model = glm::mat4(1.0f);
+        // model = glm::translate(model, lightPos);
+        // model = glm::scale(model, glm::vec3(0.2f));
 
         // glm::mat4 model = glm::mat4(1.0f);
         // model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -294,19 +368,19 @@ int main()
 
         // Bind the vertex array we established before. Vertices drawn after
         // this call will use the attrbiutes defined in VAO.
-        glBindVertexArray(VAO);
+        // glBindVertexArray(VAO);
 
-        // Draws the vertices in the currently bound vertex buffer object.
-        // Specify the primitive to draw, the starting index, and the number of
-        // vertices to draw.
-        for(unsigned int i = 0; i < 10; i++) {
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, cubePositions[i]);
-            float angle = 20.0f * i + 1;
-            model = glm::rotate(model, (float)glfwGetTime() * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-            shader.setMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
+        // // Draws the vertices in the currently bound vertex buffer object.
+        // // Specify the primitive to draw, the starting index, and the number of
+        // // vertices to draw.
+        // for(unsigned int i = 0; i < 10; i++) {
+        //     glm::mat4 model = glm::mat4(1.0f);
+        //     model = glm::translate(model, cubePositions[i]);
+        //     float angle = 20.0f * i + 1;
+        //     model = glm::rotate(model, (float)glfwGetTime() * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+        //     shader.setMat4("model", model);
+        //     glDrawArrays(GL_TRIANGLES, 0, 36);
+        // }
 
         // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -329,9 +403,9 @@ int main()
         glfwPollEvents();
     }
 
-    glDeleteVertexArrays(1, &VAO);
+    glDeleteVertexArrays(1, &cubeVAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
+    // glDeleteBuffers(1, &EBO);
 
     glfwTerminate();
     return 0;
@@ -358,11 +432,18 @@ void processInput(GLFWwindow *window)
         mainCamera.ProcessKeyboard(Camera_Movement::LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) 
         mainCamera.ProcessKeyboard(Camera_Movement::RIGHT, deltaTime);
-
-    
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) 
+        mainCamera.ProcessKeyboard(Camera_Movement::UP, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) 
+        mainCamera.ProcessKeyboard(Camera_Movement::DOWN, deltaTime);
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+    if (firstMouse) {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
 
     float xoffset = xpos - lastX;
     float yoffset = lastY - ypos;

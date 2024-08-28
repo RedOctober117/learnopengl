@@ -4,13 +4,16 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <cmath>
 
 // Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
 enum Camera_Movement {
     FORWARD,
     BACKWARD,
     LEFT,
-    RIGHT
+    RIGHT,
+    UP,
+    DOWN
 };
 
 // Default camera values
@@ -67,6 +70,7 @@ public:
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)
     {
+        Position.y = 0.2f;
         float velocity = MovementSpeed * deltaTime;
         if (direction == FORWARD)
             Position += Front * velocity;
@@ -76,8 +80,17 @@ public:
             Position -= Right * velocity;
         if (direction == RIGHT)
             Position += Right * velocity;
+        if (direction == UP)
+            Position += jumpFunction(velocity) * Up;
+        // if (direction == DOWN) {
+        //     // Position -= Up * velocity;
+        // }
+        if (direction == DOWN)
+            Position.y = 0.1f;
+    }
 
-        Position.y = 0.0f;
+    float jumpFunction(float velocity) {
+        return std::max((float)(velocity * (pow((-1 * velocity), 2) + 2)), 0.0f);
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.

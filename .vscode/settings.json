@@ -2,7 +2,8 @@
     "files.associations": {
         "*.hvm2": "bend",
         "cmath": "cpp",
-        "*.fs": "c",
+        "*.fs": "alex",
+        "*.vs": "alex",
         "array": "cpp",
         "atomic": "cpp",
         "bit": "cpp",
