@@ -33,14 +33,13 @@ const unsigned int SCR_HEIGHT = 600;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-float lastX = 0.0f;
-float lastY = 0.0f;
-
+FlyCamera mainCamera(glm::vec3(0.0f, 0.0f, 3.0f));
+float lastX = SCR_WIDTH / 2.0f;
+float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
-FlyCamera mainCamera(glm::vec3(0.0f, 0.0f, 3.0f));
 
 int main()
 {
@@ -69,10 +68,8 @@ int main()
 
     Shader objectShader("shaders/shader.vs", "shaders/shader.fs");
     Shader lightingShader("shaders/lightingShader.vs", "shaders/lightingShader.fs");
-    lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
-    lightingShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+    
 
-    Texture2D containerTexture("container2.png", GL_TEXTURE0, GL_RGBA);
 
     // x, y, z
     
@@ -249,10 +246,15 @@ int main()
     // }
     
 
-    
 
     // Free memory.
     // stbi_image_free(data);
+
+    Texture2D diffuseMap("container2.png", GL_TEXTURE0, GL_RGBA);
+    Texture2D specularMap("container2_specular.png", GL_TEXTURE1, GL_RGBA);
+    objectShader.use();
+    objectShader.setInt("material.diffuse", 0);
+    objectShader.setInt("material.specular", 1);
 
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -273,8 +275,8 @@ int main()
         // Clears the color of the immediate buffer to the color defined above.
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        lightPos.x = sin(glfwGetTime() * glm::radians(50.0f));
-        lightPos.z = cos(glfwGetTime() * glm::radians(50.0f));
+        // lightPos.x = sin(glfwGetTime() * glm::radians(50.0f));
+        // lightPos.z = cos(glfwGetTime() * glm::radians(50.0f));
 
         // containerTexture.use();
         // glBindTexture(GL_TEXTURE_2D, containerTexture.ID);
@@ -282,32 +284,14 @@ int main()
         // glBindTexture(GL_TEXTURE_2D, faceTexture.ID);
 
         objectShader.use();
-        // objectShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
-        objectShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-        objectShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
-        objectShader.setInt("material.diffuse", 0);
-        objectShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
-        objectShader.setFloat("material.shininess", 32.0f);
-
-        glm::vec3 lightColor = glm::vec3(1.0f);
-        // lightColor.x = sin(glfwGetTime() * 2.0f);
-        // lightColor.y = sin(glfwGetTime() * 0.7f);
-        // lightColor.z = sin(glfwGetTime() * 1.3f);
-        glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
-        glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);
-        objectShader.setVec3("light.ambient", ambientColor);
-        objectShader.setVec3("light.diffuse", diffuseColor);
-        objectShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-        objectShader.setFloat("light.shininess", 32.0f);
-        
-        objectShader.setVec3("lightPos", lightPos);
+        objectShader.setVec3("light.position", lightPos);
         objectShader.setVec3("viewPos", mainCamera.Position);
 
-        // const float radius = 10.0f;
-        // float camX = sin(glfwGetTime()) * radius;
-        // float camZ = cos(glfwGetTime()) * radius;
+        objectShader.setVec3("light.ambient", glm::vec3(0.2f));
+        objectShader.setVec3("light.diffuse", glm::vec3(0.5f));
+        objectShader.setVec3("light.specular", glm::vec3(1.0f));
+        objectShader.setFloat("material.shininess", 64.0f);
 
-        
         glm::mat4 projection = glm::perspective(glm::radians(mainCamera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = mainCamera.GetViewMatrix();
         objectShader.setMat4("projection", projection);
@@ -316,18 +300,49 @@ int main()
         glm::mat4 model = glm::mat4(1.0f);
         objectShader.setMat4("model", model);
 
+        diffuseMap.use();
+        glBindTexture(GL_TEXTURE_2D, diffuseMap.ID);
+        specularMap.use();
+        glBindTexture(GL_TEXTURE_2D, specularMap.ID);
+
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
-
         lightingShader.use();
-        // lightingShader.setVec3("lightPos", lightPos);
         lightingShader.setMat4("projection", projection);
         lightingShader.setMat4("view", view);
         model = glm::mat4(1.0f);
         model = glm::translate(model, lightPos);
         model = glm::scale(model, glm::vec3(0.2f));
         lightingShader.setMat4("model", model);
+
+        // objectShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
+        // objectShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+        // objectShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
+        // objectShader.setInt("material.diffuse", 0);
+        // objectShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+
+        // objectShader.setInt("material.specular", 1);
+
+        // glm::vec3 lightColor = glm::vec3(1.0f);
+        // lightColor.x = sin(glfwGetTime() * 2.0f);
+        // lightColor.y = sin(glfwGetTime() * 0.7f);
+        // lightColor.z = sin(glfwGetTime() * 1.3f);
+        // glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
+        // glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);
+        // objectShader.setFloat("light.shininess", 32.0f);
+        
+
+        // const float radius = 10.0f;
+        // float camX = sin(glfwGetTime()) * radius;
+        // float camZ = cos(glfwGetTime()) * radius;
+
+        
+
+
+
+
+        // lightingShader.setVec3("lightPos", lightPos);
 
         glBindVertexArray(lightVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
