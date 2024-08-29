@@ -40,9 +40,16 @@ public:
         stbi_image_free(data);
     }
 
+    /// @brief Activates the texture using its activeTextureIndex, ie. GL_TEXTURE0.
     void use()
     {
         glActiveTexture(activeTextureIndex);
+    }
+
+    /// @brief Activates and binds the texture to GL_TEXTURE_2D.
+    void bind() {
+        use();
+        glBindTexture(GL_TEXTURE_2D, ID);
     }
 };
 
